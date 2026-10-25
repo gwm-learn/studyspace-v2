@@ -1,0 +1,187 @@
+---
+id: "dp-07"
+title: "PPP协议栈"
+cluster: dp
+layer: L2
+status: draft
+confidence: medium
+platform: []
+source: []
+verified_on: null
+tags: ["ppp"]
+aliases: ["PPP协议栈"]
+created: 2026-10-24
+updated: 2026-10-24
+---
+# PPP协议栈
+
+
+## PPP简介
+
+
+点对点协议简称PPP协议，工作在数据链路层。设计目的主要是用来通过拨号或专线方式建立点对点连接发送数据，使其成为各种主机、 网桥和路由器之间简单连接的一种共通的解决方案。   
+
+## PPP组成
+1. 一种将封装了多种协议的数据报传输到串行链路的方法   
+2. 链路控制协议(Link Control Protocol, LCP)，LCP协议是PPP协议的一部分。它用于建立、配置、测试数据链路的连接   
+3. 一套网络控制协议(Network Control Protocol, NCP)，NCPs是一系列协议，用于建立和配置不同的网络层协议   
+
+## PPP帧
+![PPP帧](../../8.%E6%95%B0%E6%8D%AE%E9%9D%A2%E5%B7%A5%E7%A8%8B/assets/PPP%E5%B8%A7.png)   
+总体格式是首部+数据部分+尾部   
+首部从左至右依次是帧定界符，表示帧开始   
+地址字段，因为点对点协议仅作用于两个实体，发送方无需知道对方的地址，所以没有实际作用   
+控制字段，也没有实际作用   
+协议类型，指定信息部分的类型   
+尾部从左至右依次是帧检验序列，用于校验帧在传输过程中是否出现差错   
+帧定界符，表示帧的结束   
+
+## PPP链路建立
+![PPP链路](../../8.%E6%95%B0%E6%8D%AE%E9%9D%A2%E5%B7%A5%E7%A8%8B/assets/PPP%E9%93%BE%E8%B7%AF.png)   
+PPP协议一般用于用户拨号接入ISP，工作流程如下   
+
+1. LCP配置协商   
+用户点击“连接”，建立了物理层连接后，双方就要进行链路层上某些配置的协商，比如链路上的最大帧长、采用什么鉴别协议等。
+
+2. 用户验证   
+这个阶段，ISP为了防止用户恶意使用网络资源，会对用户的账号密码进行校验，使用PAP（Password Authentication Protocol）或者CHAP（Challenge-Handshake Authentication Protocol）协议，其中PAP协议的安全性较低
+
+3. NCP配置协商   
+当用户通过用户验证，双方就要用进行网络层上某些配置的协商，比如网络层采取什么协议，用户的IP地址是什么
+
+### LCP
+链路控制协议LCP(Link Control Protocol)：LCP协议是用来建立、测试、监控、终止链路的连接。在PPP工作的建立阶段和终止阶段，必须通过交换LCP分组控制链路的建立和终止。在PPP工作的打开阶段，不仅可以发送网络层的报文，也可以发送LCP的回声请求和回声应答分组，测试链路是否正常连接。   
+
+### 鉴别认证
+#### PAP
+口令鉴别协议(Password Authentication Protocol, PAP)：这是一种非常简单的鉴别协议。它在PPP的协议字段的值为:0xC023。发送方需要提供鉴别身份(通常是用户名)和口令(俗称的密码)，接收方会检测身份和口令的合法性，决定是否接受连接。   
+
+#### CHAP
+查询握手鉴别协议(Challenge Handshake Authentication Protocol, CHAP)：CHAP使用一个三步握手的鉴别方式，它不需要传输口令。口令一开始发送方和接收方都是已知的。它在PPP的协议字段的值为:0xC223。   
+1. 接收方会给发送方一个包含查询值的查询分组。   
+2. 发送方根据该查询分组结合口令生成一个结果，并把该结果作为响应分组发送给接收方。   
+3. 接收方也用同样的方式生成一个结果，如果和发送方的结果一致，就允许访问；否则访问被拒绝。   
+
+### NCP
+网络控制协议(Network Control Protocol, NCP)：这实际是一个协议组合，有多个NCP协议。因为PPP协议支持多种网络层协议，比如IP协议，Xerox协议等，每一种网络层协议在发送数据报之前，都需要对应的网络控制协议为其配置相关信息。比如IP数据报在链路层传输前，就需要IPCP协议配置好用来承载IP数据报的链路。   
+
+## PPPoE
+[协议应用PPPoE](../2.%E6%8E%A5%E5%85%A5%E5%8D%8F%E8%AE%AE/01-PPPoE%E5%8D%8F%E8%AE%AE.md)   
+
+PPPoE（PPP over Ethernet）把 PPP 会话承载在以太网上，是宽带拨号上网的标准方式。PPPoE 分为**发现阶段**和**会话阶段**：
+
+### PPPoE 发现阶段
+
+发现阶段的目标是找到对端并确定会话 ID，报文都以广播或单播方式在以太网帧中传输（帧类型 0x8863）：
+
+| 报文 | 全称 | 方向 | 作用 |
+|------|------|------|------|
+| PADI | PPPoE Active Discovery Initiation | Client → 广播 | 客户端发起请求，携带想要的服务类型 |
+| PADO | PPPoE Active Discovery Offer | Server → 单播 | 服务端确认可提供服务 |
+| PADR | PPPoE Active Discovery Request | Client → 单播 | 客户端选定一个 Server，正式请求建立会话 |
+| PADS | PPPoE Active Discovery Session-confirmation | Server → 单播 | 服务端分配唯一的 Session ID，进入会话阶段 |
+| PADT | PPPoE Active Discovery Terminate | 双向单播 | 任意时刻终止会话 |
+
+发现阶段只负责建立二层会话，不传任何 PPP 数据。Session ID 由 Server 分配，后续所有 PPP 帧（类型 0x8864）都必须携带该 ID。
+
+### PPPoE 会话阶段
+
+会话建立后，进入 PPP 的完整协商流程：
+
+1. **LCP 阶段**：协商链路参数（最大接收单元 MRU、认证协议 PAP/CHAP 等）。
+2. **认证阶段**：按 LCP 协商结果执行 PAP 或 CHAP 认证。
+3. **NCP 阶段**：运行 IPCP 协商 IP 地址、DNS 等网络层参数。
+4. 协商完成后进入数据通信阶段，直到任一方发送 PADT 或 PPP 层终结。
+
+PPPoE 常见故障点：PADI 广播被 VLAN 隔离、Session ID 丢失导致 PPP 帧被丢弃、LCP 的 MRU 协商不一致导致大数据包丢包。
+
+## PPPoE 与 PPP 的异同
+
+| 项目 | PPP | PPPoE |
+|------|-----|-------|
+| 承载介质 | 串行链路（拨号/专线） | 以太网 |
+| 链路建立 | LCP 直接协商 | 先 PPPoE 发现阶段，再 LCP |
+| 帧封装 | HDLC 类似帧 | 以太网帧 + PPPoE 头 + PPP 帧 |
+| 典型场景 | 专线、老式拨号 | 家庭宽带、FTTH、DSL
+
+## PPP 协议栈
+
+
+## 概述
+
+PPP（Point-to-Point Protocol）是点对点链路上的链路层协议，定义了链路建立、认证、网络层协议复用三大能力。Linux 内核中 PPP 由 `drivers/net/ppp/` 实现，用户空间由 **pppd** 守护进程负责协议协商，二者通过 **PPP 通道设备** 交互。OpenWrt 中 xDSL、4G/5G 拨号、PPPoE 宽带上网都依赖 PPP 栈。
+
+## 内核 PPP 实现
+
+### 1. 核心结构与设备
+
+内核 PPP 模块（`ppp_generic.c`）以三类对象组织：
+
+- **ppp 单元**：`struct ppp`，一个实例对应一条 PPP 链路，承载协议字段解复用与多路复用。
+- **通道（channel）**：`struct ppp_channel`，代表底层承载介质，如 TTY 串口、PPPoE 会话、PPPoATM PVC，通过 `ppp_register_channel()` 注册。
+- **接口**：每实例暴露一个点对点 netdev（`ppp0`），上层 IP 包写进 `ppp0`，由 ppp 单元封装成 PPP 帧交给通道发送。
+
+收发路径：
+
+```
+发送: 应用 → ppp0 → ppp_start_xmit → 封装(协议字段+FCS) → 通道 → 介质
+接收: 介质 → 通道 → ppp_input → 按协议解复用 → IP 包交给协议栈 / LCP 帧交给 pppd
+```
+
+### 2. 协议字段解复用
+
+PPP 帧头含 2 字节协议字段（`PROTO_*`），内核按协议分发：
+
+- `0x0021`（IPv4）→ 直接送 IP 协议栈；`0x0057`（IPv6）→ 送 IPv6。
+- 控制协议：LCP（`0xc021`）、PAP（`0xc023`）、CHAP（`0xc223`）、IPCP（`0x8021`）、IPV6CP（`0x8057`）→ 交给 pppd 处理。
+
+### 3. pppd 与内核的交互
+
+pppd 通过 **TTY 行规程**与内核交换控制帧：底层 tty 挂载 PPP 行规程（`ppp_async.c` / N_PPP），控制协议帧从通道直接送行规程转交 pppd，数据帧留在内核转发。pppd 还通过 **ioctl** 管理实例：`PPPIOCNEWUNIT` 建单元、`PPPIOCATTACH` 绑定通道、`PPPIOCSMRU` 设 MRU 等。
+
+## PPP 协议协商
+
+一条 PPP 链路建立分四个阶段，全部由 pppd 完成：
+
+1. **LCP 协商**：链路层参数（MRU、认证协议、魔术字），协商失败链路关闭。
+2. **认证**：PAP（明文口令）或 CHAP（挑战-应答），由 `user`/`password` 配置决定。
+3. **NCP 协商**：IPCP 分配/确认 IP 地址与 DNS，协商出的地址成为 `ppp0` 的地址。
+4. **运行阶段**：LCP Echo 保活（`lcp-echo-interval`），超时触发重连。
+
+OpenWrt 中拨号配置在 `/etc/config/network`：
+
+```
+config interface 'wan'
+    option proto 'pppoe'
+    option username 'user@telecom'
+    option password '123456'
+    option ifname 'eth0'
+```
+
+上层由 **netifd** 拉起 pppd，`/usr/lib/pppd/` 下的脚本在 IPCP 完成后执行，写入路由、DNS 和防火墙规则。
+
+## PPPoE 内核路径
+
+PPPoE（`drivers/net/ppp/pppoe.c`）把 PPP 帧封装进以太网帧，内核路径分发现与数据两个阶段：
+
+- **发现阶段**：pppd 配合 `pppoe-discovery` 发 PADI 广播找接入服务器，服务器回 PADO，客户端回 PADR 请求会话，服务器分配 **session-id** 并回 PADS。之后内核建立 `struct pppoe_net` 中 session-id 到接口/通道的映射。
+- **会话阶段**：收包以太网帧（`ethertype 0x8863/0x8864`）→ `pppoe_rcv()`，按 `session-id + 接口` 查会话表 → `ppp_input()` 进 ppp 单元；发包经通道 `pppoe_xmit()` 封装 PPPoE 头交给承载网卡。
+
+两个 ethertype 在进入 `pppoe_rcv` 前先由 `packet_type` 分发。OpenWrt 的 pppoe 拨号即此路径，eth0 上同时存在发现帧和会话帧。
+
+## OpenWrt 中 4G/5G 拨号路径
+
+4G/5G 模块（RNDIS/ECM 虚拟网卡）拨号多数不走传统 PPP，而是由 **qmi_wwan / cdc_ether** 直接给出 IP 网卡。老式 3G 模块（串口 AT+PPP）仍走：
+
+```
+串口ttyUSB → ppp_async 行规程 → pppd 拨号 → ppp0 → netifd
+```
+
+OpenWrt 中 `proto '3g'` / `proto 'qmi'` 等封装了 pppd（或 modemmanager）与 AT 指令交互。
+
+## 调试要点
+
+- `pppd debug`：前台输出 LCP/IPCP 协商过程，`logread` 可看完整日志。
+- 内核侧：`cat /proc/net/dev` 看 `ppp0` 计数，`pppstats` 查流量与压缩统计。
+- 抓包：PPPoE 用 `tcpdump -i eth0 'ether proto 0x8863 or ether proto 0x8864'`，链路协商用 `tcpdump -i ppp0 -vv`。
+- 常见故障：LCP 协商超时（对端不响应）、PAP/CHAP 认证失败（账号密码错）、IPCP 无响应（运营商限单播）。

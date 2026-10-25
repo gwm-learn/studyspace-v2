@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+.AppleDouble
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 构建产物
+build/
+out/
+*.o
+*.ko
+*.so
+*.a
+*.d
+*.mod
+*.cmd
+*.tmp
+
+# 日志与抓包临时文件
+*.log
+*.pcap.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# 不忽略
+!*.md
